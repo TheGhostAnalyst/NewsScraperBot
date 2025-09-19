@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urljoin
 from fake_useragent import UserAgent
 import time
 
@@ -16,89 +17,103 @@ def send_telegram(message):
     except Exception as e:
         print("Telegram error:", e)
 
-# ====== Scraper Config ======
+def send_article_to_telegram(title, author, link, snippet):
+    message = (
+        f"⚽ <b>{title}</b>\n\n"
+        f"👤 Author: {author}\n"
+        f"🔗 {link}\n\n"
+        f"{snippet}..."  # limit snippet size
+    )
+    send_telegram(message)
+
+# Proxy settings for Tor
 proxies = {
     'http': 'socks5h://127.0.0.1:9050',
     'https': 'socks5h://127.0.0.1:9050'
 }
 
-url = "https://punchng.com/all-posts"
+# Main URL to scrape
+url = "https://www.goal.com/en-ng/news/1"  
 ua = UserAgent()
 headers = {'User-Agent': ua.random}
 
 seen_links = set()
-separator = "=" * 80
 
-def scrape_articles():
+def scrape_football():
     session = requests.session()
     session.proxies.update(proxies)
     session.headers.update(headers)
-
+    
     try:
+        # Step 1: Fetch the main page
         res = session.get(url, timeout=20)
         res.raise_for_status()
         soup = BeautifulSoup(res.text, "html.parser")
 
-        articles = soup.find_all('article')
+        # Step 2: Extract all 'a' links
+        a_tags = soup.find_all('a', href=True)
+        for a in a_tags:
+            link = urljoin(url, a['href'])
+            if 'lists' in link and link not in seen_links:
+                seen_links.add(link)
 
-        for article in articles:
-            title_tag = article.find('a', href=True)
-            if not title_tag:
-                continue
+        # Step 3: Visit each unique link
+        for link in seen_links:
+            try:
+                resp = session.get(link, timeout=20)
+                resp.raise_for_status()
+                new_soup = BeautifulSoup(resp.text, "html.parser")
 
-            article_url = title_tag['href'].strip()
-            if article_url in seen_links:
-                continue
-            seen_links.add(article_url)
+                article = new_soup.find('article')
+                if article:
+                    # Title
+                    head_tag = "No title"
+                    head = article.find('h1')
+                    if head:
+                        head_tag = head.text.strip()
 
-            timestamp_tag = article.find('span', class_="post-date")
+                    # Author
+                    author_name = "Unknown"
+                    for a_tag in article.find_all('a', href=True):
+                        if 'author' in a_tag['href']:
+                            author_name = a_tag.text.strip()
+                            break  
 
-            # fetch article content
-            resp = session.get(article_url, timeout=20)
-            resp.raise_for_status()
-            soup_article = BeautifulSoup(resp.text, "html.parser")
+                    # Paragraphs
+                    snippet_list = []
+                    paragraphs = article.find_all('p')
+                    for p in paragraphs[:2]:
+                        sss = p.text.strip()
+                        if sss:
+                            snippet_list.append(sss)
+                    snippet = "\n\n".join(snippet_list)
 
-            content_div = soup_article.find('div', class_='post-content')
-            if not content_div:
-                continue
+                    # Send to Telegram
+                    send_article_to_telegram(head_tag, author_name, link, snippet)
+                    print(f"✅ Sent to Telegram: {head_tag}")
+                    time.sleep(2)
+                else:
+                    print(f"❌ No article found at {link}")
 
-            paragraphs = content_div.find_all('p')
-            seen_paragraphs = set()
-            news_preview = []
-
-            for p in paragraphs:
-                text = p.get_text(strip=True)
-                if text and "Related News" not in text:
-                    if text not in seen_paragraphs:
-                        seen_paragraphs.add(text)
-                        news_preview.append(text)
-
-            # ====== Telegram Notify ======
-            preview_text = "\n\n".join(news_preview[:1]) if news_preview else ''
-
-            message = (
-            f"📰 <b>{title_tag.text.strip()}</b>\n"
-            f"{article_url}\n"
-            f"🕒 {timestamp_tag.text.strip() if timestamp_tag else 'N/A'}\n\n"
-            f"{preview_text}"
-            )
-            send_telegram(message)
-
-            print(f"Sent to Telegram: {title_tag.text.strip()}")
-            time.sleep(2)
+            except requests.exceptions.RequestException as e:
+                print(f"Error fetching {link}: {e}")
 
     except Exception as e:
-        print("Error:", e)
+        print(f"An error occurred: {e}")
 
-
-ask = input('Hit enter to start news scrape: ')
+# Start scraping
+ask = input('Press ENTER to start football news: ')
 if ask == '':
-    print('Checking for latest News......')
-    scrape_articles()
-    print("Done scraping now let me scan for you after every 5mins")
+    print('Starting football news scraper...\n')
+    # Directly start loop without extra scrape
+    try:
+        while True:
+            print('Checking for new football news...\n')
+            scrape_football()
+            print('Waiting 5 minutes...\n')
+            time.sleep(300)
+    except KeyboardInterrupt:
+        print("Script stopped by user.")
+else:
+    print("Didn't I tell you to hit ENTER?")
 
-while True:
-    print("Checking for new articles...\n")
-    scrape_articles()
-    print("Waiting 5 minutes...\n")
-    time.sleep(300)
