@@ -1,15 +1,15 @@
-Here’s a **detailed `README.md`** file for your **news scraper bot** project, complete with setup instructions, usage, and relevant details.
+Here’s a **detailed `README.md`** file for your **football news scraper bot** project, complete with setup instructions, usage, and relevant details.
 
 ---
 
 # **News Scraper Bot**
 
-A **Python Telegram bot** that scrapes news articles from the **Punch Nigeria** website and sends them to your Telegram chat. The bot checks for new articles every 5 minutes and sends the latest updates with a brief preview of the content.
+A **Python Telegram bot** that scrapes news articles from the **goal.com** website and sends them to your Telegram chat. The bot checks for new footballarticles every 5 minutes and sends the latest updates with a brief preview of the content.
 
 ### Features:
 
-* **Web Scraping**: Scrapes articles from the **Punch Nigeria** website using **BeautifulSoup**.
-* **Telegram Integration**: Sends news updates via a Telegram bot using the **Telegram Bot API**.
+* **Web Scraping**: Scrapes articles from the **goal.com** website using **BeautifulSoup**.
+* **Telegram Integration**: Sends football news updates via a Telegram bot using the **Telegram Bot API**.
 * **Custom User-Agent & Proxy**: Uses a **random user-agent** and connects through **Tor (socks5 proxy)** to ensure anonymity.
 
 ---
@@ -162,7 +162,7 @@ To stop the bot, you can interrupt the script (Ctrl+C).
 
 1. **Web Scraping**:
 
-   * The bot scrapes the **Punch Nigeria** website (`https://punchng.com/all-posts`) using the **`requests`** library and **`BeautifulSoup`** to parse the HTML.
+   * The bot scrapes the **goal.com** website (`https://www.goal.com/en-ng/news`) using the **`requests`** library and **`BeautifulSoup`** to parse the HTML.
    * It looks for `article` tags and extracts the **title** and **URL**.
    * If the article URL has not been seen before (tracked via the `seen_links` set), the bot fetches the article's full content.
 
